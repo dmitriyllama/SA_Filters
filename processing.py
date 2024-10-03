@@ -1,14 +1,31 @@
 from abc import ABC
 import cv2
+from multiprocessing import Process, Queue
 
 class Filter(ABC):
     def __init__(self, outputs: list):
+        self.queue = Queue()
         self.outputs = outputs
+        self.process = None
 
     def input(self, frame):
-        result = self.__apply(frame)
-        for out in self.outputs:
-            out(result)
+        self.queue.put(frame)
+        if self.process == None:
+            self.process = Process(target=self.work)
+            self.process.start()
+
+    def work(self):
+        while True:
+            frame = self.queue.get()
+            if frame is None:
+                self.process.close()
+                self.process = None
+                for out in self.outputs:
+                    out(None)
+                break
+            result = self.__apply(frame)
+            for out in self.outputs:
+                out(result)
 
 class GrayscaleFilter(Filter):
     def _Filter__apply(self, frame):
@@ -47,10 +64,12 @@ class VideoFileSource():
     def start(self):
         while True:
             ret, frame = self.capture.read()
-            if not ret:
-                print("End of video " + self.file)
-                break
             if cv2.waitKey(1) == ord('q'):
+                ret = False
+            if not ret:
+                print("Video ended")
+                for out in self.outputs:
+                    out(None)
                 break
             for out in self.outputs:
                 out(frame)
@@ -59,10 +78,28 @@ class VideoFileSource():
 
 class Display():
     def __init__(self, name: str, outputs: list):
+        self.queue = Queue()
         self.name = name
         self.outputs = outputs
+        self.process = None
 
     def input(self, frame):
-        cv2.imshow(self.name, frame)
-        for out in self.outputs:
-            out(frame)
+        self.queue.put(frame)
+        if self.process == None:
+            self.process = Process(target=self.work)
+            self.process.start()
+
+    def work(self):
+        while True:
+            cv2.waitKey(1)
+            frame = self.queue.get()
+            if frame is None:
+                self.process.close()
+                self.process = None
+                cv2.destroyWindow(self.name)
+                for out in self.outputs:
+                    out(None)
+                break
+            cv2.imshow(self.name, frame)
+            for out in self.outputs:
+                out(frame)
