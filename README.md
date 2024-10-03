@@ -11,4 +11,4 @@ pip install opencv-python
 Run `main.py`. Done!
 
 ## Multiprocessing
-Please note the `multiprocessed` branch
+Please note the `multiprocessed` branch for a different attempt at the implementation.
