@@ -62,7 +62,7 @@ class Display():
         self.name = name
         self.outputs = outputs
 
-    def show(self, frame):
+    def input(self, frame):
         cv2.imshow(self.name, frame)
         for out in self.outputs:
             out(frame)
